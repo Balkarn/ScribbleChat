@@ -1,0 +1,48 @@
+:root {
+    --main-color: #5ea3d0;
+    --secondary-color: white;
+    --main-text-color: #3e5869;
+    --secondary-text-color: #b0c7d6;
+    --send-message-form: #F5F5F5;
+}
+
+.title {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 40px;
+    width: 720px;
+    color: var(--secondary-color);
+    background: var(--main-color);
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+}
+
+.list {
+    box-sizing: border-box;
+    padding: 0 0 0 0px;
+    margin: 0;
+    width: 720px;
+    height: 100%;
+    overflow: scroll;
+    background: white;
+}
+
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: system-ui;
+    font-weight: 200;
+    color: #3e5869; 
+}
+
+#root {
+    height: 100%;
+}
+
+.app {
+    height: calc(100% - 200px); 
+}

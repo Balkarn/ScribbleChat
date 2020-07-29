@@ -11,10 +11,14 @@ export default function ClientComponent() {
   const [response, setResponse] = useState("");
   const [responses, setResponses] = useState([]); //array of responses from server
 
+  function recieveDataFromCanvas(data) {
+    setResponses(responses => [...responses, data]); //append response to responses
+  }
+
   useEffect(() => {
     socket.on("FromAPI", data => {
       setResponse(data);
-      setResponses(responses => [...responses, data]); //append response to responses
+      //setResponses(responses => [...responses, data]); //append response to responses
     });
 
     return () => socket.disconnect(); //close connection when component unmounts
@@ -31,12 +35,12 @@ export default function ClientComponent() {
           ))}
         </ul>
       </div>
-      <CanvasBox /> {/*drawing canvas component*/}
+      <CanvasBox sendDataFromCanvas={recieveDataFromCanvas} /> {/*drawing canvas component*/}
     </div>
   );
 }
 
-function Title() {
+const Title = () => {
   return (
     <div>
       <p className="title">ScribbleChat</p>
@@ -44,7 +48,7 @@ function Title() {
   );
 }
 
-function CanvasBox() {
+const CanvasBox = ({sendDataFromCanvas}) => {
   const canvasRef = React.useRef(null); //reference to canvas
   const [context, setContext] = React.useState(null); //context of canvas
 
@@ -80,6 +84,13 @@ function CanvasBox() {
     function handleMouseUp() { //record when mouse up
       mouseDown = false;
     }
+    
+    function handleMouseOver(event) {
+      end = { //record when the mouse has exit and reentered
+        x: event.clientX - canvasOffsetLeft,
+        y: event.clientY - canvasOffsetTop,
+      };
+    }
 
     function handleMouseMove(event) {
       if (mouseDown && context) { //if mouse down and canvas exists
@@ -108,9 +119,10 @@ function CanvasBox() {
       const renderCtx = canvasRef.current.getContext('2d'); //2d drawing canvas
 
       if (renderCtx) {
-        canvasRef.current.addEventListener('mousedown', handleMouseDown); //listen for events
-        canvasRef.current.addEventListener('mouseup', handleMouseUp);
+        document.addEventListener('mousedown', handleMouseDown); //listen for events
+        document.addEventListener('mouseup', handleMouseUp);
         canvasRef.current.addEventListener('mousemove', handleMouseMove);
+        canvasRef.current.addEventListener("mouseover", handleMouseOver);
 
         canvasOffsetLeft = canvasRef.current.offsetLeft; //set canvas offset to its location, as it is not at 0,0
         canvasOffsetTop = canvasRef.current.offsetTop;
@@ -128,6 +140,16 @@ function CanvasBox() {
     }
   }, [context]);
 
+  function clearcanvas() {
+    context.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+  }
+
+  function sendmessage() {
+    //var imgData = context.getImageData(0, 0, canvasRef.current.width, canvasRef.current.height);
+    sendDataFromCanvas("hi");
+  }
+
+
   return (
     <div>
       <div className="canvasholder">
@@ -139,10 +161,10 @@ function CanvasBox() {
         ></canvas>
       </div>
       <div className="buttons">
-        <button className="clrbutton">
+        <button className="clrbutton" onClick={clearcanvas}>
           Clear
         </button>
-        <button className="sndbutton">
+        <button className="sndbutton" onClick={sendmessage}>
           Send
         </button>
       </div>

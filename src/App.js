@@ -50,6 +50,13 @@ function CanvasBox() {
 
   React.useEffect(() => {
 
+    function handleResize() {
+      canvasOffsetLeft = canvasRef.current.offsetLeft; //Change canvas offset when window resizes
+      canvasOffsetTop = canvasRef.current.offsetTop;
+    }
+    
+    window.addEventListener('resize', handleResize.bind(this)); //Event to listen for window resize
+
     let mouseDown = false; //mouse variables
     let start = { x: 0, y: 0 };
     let end = { x: 0, y: 0 };
@@ -123,12 +130,22 @@ function CanvasBox() {
 
   return (
     <div>
-      <canvas
-        id="canvas"
-        ref={canvasRef}
-        width={670}
-        height={150}
-      ></canvas>
+      <div className="canvasholder">
+        <canvas
+          id="canvas"
+          ref={canvasRef}
+          width={670}
+          height={150}
+        ></canvas>
+      </div>
+      <div className="buttons">
+        <button className="clrbutton">
+          Clear
+        </button>
+        <button className="sndbutton">
+          Send
+        </button>
+      </div>
     </div>
   );
 }

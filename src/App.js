@@ -8,16 +8,19 @@ const ENDPOINT = "http://127.0.0.1:4001"; //for local testing
 const socket = socketIOClient(ENDPOINT); //connect socketio clinent to endpoint
 
 export default function ClientComponent() {
-  const [response, setResponse] = useState("");
-  const [responses, setResponses] = useState([]); //array of responses from server
+  const [name, setName] = React.useState("");
+  const [responses, setResponses] = React.useState([]); //array of responses from server
 
   function recieveDataFromCanvas(data) {
     setResponses(responses => [...responses, data]); //append response to responses
   }
 
   useEffect(() => {
+
+    setName(prompt("What is your name?"));
+
     socket.on("FromAPI", data => {
-      setResponse(data);
+      //setResponse(data);
       //setResponses(responses => [...responses, data]); //append response to responses
     });
 
@@ -25,18 +28,29 @@ export default function ClientComponent() {
 
   }, []);
 
+  useEffect(() => {
+    document.getElementById("scrolldiv").scrollTop = document.getElementById("scrolldiv").scrollHeight;
+  }, [responses]);
+
   return (
     <div className="app">
       <Title /> {/*title component*/}
-      <div className = "list">
-        <ul>
-          {responses.map(aResponse => (
-            <li><div>{aResponse}</div></li>
-          ))}
+      <div id="scrolldiv" className = "list">
+        <ul className ="listcomponent">
+          {responses.map(aResponse => ShowMessage(aResponse,name)) /*For each response call the ShowMessage function and increase the messages count*/}
         </ul>
       </div>
       <CanvasBox sendDataFromCanvas={recieveDataFromCanvas} /> {/*drawing canvas component*/}
     </div>
+  );
+}
+
+const ShowMessage = (data,name) => {
+  return (
+    <li>
+      <p className="name">{name}</p>
+      <img src={data}></img> {/*Display an image with the source as the image data url*/}
+    </li>
   );
 }
 
@@ -145,8 +159,9 @@ const CanvasBox = ({sendDataFromCanvas}) => {
   }
 
   function sendmessage() {
-    //var imgData = context.getImageData(0, 0, canvasRef.current.width, canvasRef.current.height);
-    sendDataFromCanvas("hi");
+    var imagedataurl = document.getElementById('canvas').toDataURL(); //get image data as a data url
+    sendDataFromCanvas(imagedataurl);
+    context.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
   }
 
 

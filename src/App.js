@@ -1,13 +1,43 @@
 import React, { useEffect, useState } from "react";
 import socketIOClient from "socket.io-client";
 import './style.css';
+import { TextField, Button } from '@material-ui/core'
 
 const ENDPOINT = "http://127.0.0.1:4001"; //for local testing
 //const ENDPOINT = "https://scribblechat-server.herokuapp.com/"; //for heroku testing
 
 const socket = socketIOClient(ENDPOINT); //connect socketio clinent to endpoint
 
-export default function ClientComponent() {
+export default function MainMenu() {
+  const [textfieldValue,setTextfieldValue] = React.useState('');
+  const [error,setError] = React.useState(true);
+
+  const handleTextfield = event => {
+    setTextfieldValue(event.target.value)
+    setError(textfieldValue.length == 0 || textfieldValue.length > 19)
+    console.log(textfieldValue)
+  }
+
+  return(
+    <div>
+      <Title />
+      <div className="form">
+        <TextField
+          font-size='16px'
+          id='outlined-textarea'
+          label='Username'
+          placeholder='Write your name here'
+          variant='outlined'
+          onChange={handleTextfield}
+          error={error}
+          helperText={error ? 'Must be 1-20 Characters' : ' '}
+        ></TextField>
+      </div>
+    </div>
+  );
+}
+
+function ClientComponent() {
   const [name, setName] = React.useState("");
   const [responses, setResponses] = React.useState([]); //array of responses from server
 
@@ -93,6 +123,14 @@ const CanvasBox = ({sendDataFromCanvas}) => {
         x: event.clientX - canvasOffsetLeft,
         y: event.clientY - canvasOffsetTop,
       };
+
+      //Create a dot on the canvas
+      context.beginPath();
+      context.strokeStyle = '#000';
+      context.lineWidth = 1;
+      context.arc(start.x, start.y, 1, 0, 2 * Math.PI);
+      context.stroke();
+      context.closePath();
     }
 
     function handleMouseUp() { //record when mouse up
@@ -171,8 +209,8 @@ const CanvasBox = ({sendDataFromCanvas}) => {
         <canvas
           id="canvas"
           ref={canvasRef}
-          width={670}
-          height={150}
+          width={666}
+          height={146}
         ></canvas>
       </div>
       <div className="buttons">

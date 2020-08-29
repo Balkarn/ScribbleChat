@@ -4,6 +4,7 @@
     --main-text-color: #3e5869;
     --secondary-text-color: #b0c7d6;
     --send-message-form: #F5F5F5;
+    --join-color: #18c446;
 }
 
 .title {
@@ -24,6 +25,15 @@
     text-align: left;
     color: var(--secondary-color);
     background: var(--main-color);
+    margin: 0;
+    padding: 0;
+}
+
+.joinmsg {
+    text-align: left;
+    color: var(--secondary-color);
+    background: var(--join-color);
+    width: 670px;
     margin: 0;
     padding: 0;
 }

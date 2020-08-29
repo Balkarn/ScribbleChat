@@ -1,44 +1,75 @@
 import React, { useEffect, useState } from "react";
 import socketIOClient from "socket.io-client";
 import './style.css';
-import { TextField, Button } from '@material-ui/core'
+import { TextField, Button } from '@material-ui/core';
+import SendIcon from '@material-ui/icons/Send';
+import DeleteIcon from '@material-ui/icons/Delete';
 
 const ENDPOINT = "http://127.0.0.1:4001"; //for local testing
 //const ENDPOINT = "https://scribblechat-server.herokuapp.com/"; //for heroku testing
 
 const socket = socketIOClient(ENDPOINT); //connect socketio clinent to endpoint
 
-export default function MainMenu() {
+//Empty canvas png for comparing content
+const emptyMessage = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAApoAAACSCAYAAADlwGq7AAABkElEQVR4nO3BgQAAAADDoPlTn+AGVQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPAPwLQABs882JgAAAABJRU5ErkJggg=="
+
+export default function LoginScreen() {
   const [textfieldValue,setTextfieldValue] = React.useState('');
   const [error,setError] = React.useState(true);
+  const [isLoggedIn,setIsLoggedIn] = React.useState(false);
 
   const handleTextfield = event => {
-    setTextfieldValue(event.target.value)
-    setError(textfieldValue.length == 0 || textfieldValue.length > 19)
-    console.log(textfieldValue)
+    var eventVal = event.target.value; //setting a state isn't synchronous so store value in a temp variable
+    setTextfieldValue(eventVal);
+    setError(eventVal.length == 0 || eventVal.length > 20);
   }
 
-  return(
-    <div>
-      <Title />
-      <div className="form">
-        <TextField
-          font-size='16px'
-          id='outlined-textarea'
-          label='Username'
-          placeholder='Write your name here'
-          variant='outlined'
-          onChange={handleTextfield}
-          error={error}
-          helperText={error ? 'Must be 1-20 Characters' : ' '}
-        ></TextField>
+  const sendValue = () => {
+    if (error) { //only log in if the username is valid
+      setIsLoggedIn(false);
+    } else {
+      setIsLoggedIn(true);
+    }
+  }
+
+  if (isLoggedIn) { //If the user has logged in render the main component
+
+    return (<MainComponent name={textfieldValue}/>);
+
+  } else { //otherwise render the login screen
+
+    return(
+      <div>
+        <Title />
+        <div className="form">
+          <TextField
+            font-size='16px'
+            id='outlined-textarea'
+            label='Username'
+            placeholder='Write your name here'
+            variant='outlined'
+            onChange={handleTextfield}
+            error={error}
+            helperText={error ? 'Must be 1-20 Characters' : ' '}
+          ></TextField>
+        </div>
+        <div className="form">
+          <Button
+            variant='contained'
+            color='primary'
+            size='medium'
+            endIcon={<SendIcon />}
+            onClick={sendValue}
+          >
+            Submit
+          </Button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 }
 
-function ClientComponent() {
-  const [name, setName] = React.useState("");
+const MainComponent = ({name}) => {
   const [responses, setResponses] = React.useState([]); //array of responses from server
 
   function recieveDataFromCanvas(data) {
@@ -47,7 +78,8 @@ function ClientComponent() {
 
   useEffect(() => {
 
-    setName(prompt("What is your name?"));
+    console.log("component mounted");
+    setResponses(responses => [...responses, name+" joined!"]); //Add welcome message to responses
 
     socket.on("FromAPI", data => {
       //setResponse(data);
@@ -76,12 +108,20 @@ function ClientComponent() {
 }
 
 const ShowMessage = (data,name) => {
-  return (
-    <li>
-      <p className="name">{name}</p>
-      <img src={data}></img> {/*Display an image with the source as the image data url*/}
-    </li>
-  );
+  if (data.length>50) {
+    return (
+      <li>
+        <p className="name">{name}</p>
+        <img src={data}></img> {/*Display an image with the source as the image data url*/}
+      </li>
+    );
+  } else {
+    return (
+      <li>
+        <p className="joinmsg">{data}</p>
+      </li>
+    );
+  }
 }
 
 const Title = () => {
@@ -112,25 +152,27 @@ const CanvasBox = ({sendDataFromCanvas}) => {
     let canvasOffsetTop = 0;
 
     function handleMouseDown(event) { //track the change in mouse coordinates when mouse down
-      mouseDown = true;
+      if (context) {
+        mouseDown = true;
 
-      start = {
-        x: event.clientX - canvasOffsetLeft,
-        y: event.clientY - canvasOffsetTop,
-      };
+        start = {
+          x: event.clientX - canvasOffsetLeft,
+          y: event.clientY - canvasOffsetTop,
+        };
 
-      end = {
-        x: event.clientX - canvasOffsetLeft,
-        y: event.clientY - canvasOffsetTop,
-      };
+        end = {
+          x: event.clientX - canvasOffsetLeft,
+          y: event.clientY - canvasOffsetTop,
+        };
 
-      //Create a dot on the canvas
-      context.beginPath();
-      context.strokeStyle = '#000';
-      context.lineWidth = 1;
-      context.arc(start.x, start.y, 1, 0, 2 * Math.PI);
-      context.stroke();
-      context.closePath();
+        //Create a dot on the canvas
+        context.beginPath();
+        context.strokeStyle = '#000';
+        context.lineWidth = 1;
+        context.arc(start.x, start.y, 1, 0, 2 * Math.PI);
+        context.stroke();
+        context.closePath();
+      }
     }
 
     function handleMouseUp() { //record when mouse up
@@ -193,13 +235,17 @@ const CanvasBox = ({sendDataFromCanvas}) => {
   }, [context]);
 
   function clearcanvas() {
-    context.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    context.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height); //clear the canvas
   }
 
   function sendmessage() {
     var imagedataurl = document.getElementById('canvas').toDataURL(); //get image data as a data url
-    sendDataFromCanvas(imagedataurl);
-    context.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    if (imagedataurl != emptyMessage) {
+      sendDataFromCanvas(imagedataurl);
+      context.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height); //clear the canvas
+    } else {
+      console.log("Message not sent (spam)")
+    }
   }
 
 
@@ -214,12 +260,26 @@ const CanvasBox = ({sendDataFromCanvas}) => {
         ></canvas>
       </div>
       <div className="buttons">
-        <button className="clrbutton" onClick={clearcanvas}>
-          Clear
-        </button>
-        <button className="sndbutton" onClick={sendmessage}>
-          Send
-        </button>
+        <div>
+        <Button
+          style={{ maxWidth: '50px', maxHeight: '75px', minWidth: '50px', minHeight: '75px' }}
+          variant='contained'
+          color='secondary'
+          onClick={clearcanvas}
+        >
+          <DeleteIcon />
+        </Button>
+        </div>
+        <div>
+        <Button
+          style={{ maxWidth: '50px', maxHeight: '75px', minWidth: '50px', minHeight: '75px' }}
+          variant='contained'
+          color='primary'
+          onClick={sendmessage}
+        >
+          <SendIcon />
+        </Button>
+      </div>
       </div>
     </div>
   );

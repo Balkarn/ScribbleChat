@@ -17,6 +17,21 @@ export default function LoginScreen() {
   const [textfieldValue,setTextfieldValue] = React.useState('');
   const [error,setError] = React.useState(true);
   const [isLoggedIn,setIsLoggedIn] = React.useState(false);
+  const [nameDuplicate,setNameDuplicate] = React.useState(false);
+
+
+  useEffect(() => {
+
+    socket.on("nameAgain", data => {
+      setNameDuplicate(true);
+    });
+
+    socket.on("nameValid", data => {
+      setNameDuplicate(false);
+      setIsLoggedIn(true);
+    });
+
+  }, []);
 
   const handleTextfield = event => {
     var eventVal = event.target.value; //setting a state isn't synchronous so store value in a temp variable
@@ -28,7 +43,7 @@ export default function LoginScreen() {
     if (error) { //only log in if the username is valid
       setIsLoggedIn(false);
     } else {
-      setIsLoggedIn(true);
+      socket.emit('tryName',textfieldValue)
     }
   }
 
@@ -64,26 +79,37 @@ export default function LoginScreen() {
             Submit
           </Button>
         </div>
+        {nameDuplicate ? <p>Sorry that name is taken!</p> : null }
       </div>
     );
   }
 }
 
 const MainComponent = ({name}) => {
-  const [responses, setResponses] = React.useState([]); //array of responses from server
 
+  const [responses, setResponses] = React.useState([]); //array of responses from server
+  
   function recieveDataFromCanvas(data) {
-    setResponses(responses => [...responses, data]); //append response to responses
+    // setResponses(responses => [...responses, data]); //append response to responses
+    socket.emit('sendMessage',{user:name,message:data}) //send message to server
   }
 
   useEffect(() => {
-
     console.log("component mounted");
-    setResponses(responses => [...responses, name+" joined!"]); //Add welcome message to responses
+    
+    setResponses(responses => [...responses, {type:"join",value:name+" joined!"}]); //Add welcome message to responses
+    
+    socket.on("recieveMessage", data => {
+      setResponses(responses => [...responses, { type: "user", value:data.user}]); //append name to responses
+      setResponses(responses => [...responses, { type: "message", value:data.message}]); //append message to responses
+    });
 
-    socket.on("FromAPI", data => {
-      //setResponse(data);
-      //setResponses(responses => [...responses, data]); //append response to responses
+    socket.on("userJoined", data => {
+      setResponses(responses => [...responses, { type: "join", value: data + " joined!" }]);
+    });
+
+    socket.on("userLeft", data => {
+      setResponses(responses => [...responses, { type: "leave", value: data + " left." }]);
     });
 
     return () => socket.disconnect(); //close connection when component unmounts
@@ -107,18 +133,29 @@ const MainComponent = ({name}) => {
   );
 }
 
-const ShowMessage = (data,name) => {
-  if (data.length>50) {
+const ShowMessage = (data) => {
+  if (data.type=="message") {
     return (
       <li>
-        <p className="name">{name}</p>
-        <img src={data}></img> {/*Display an image with the source as the image data url*/}
+        <img src={data.value}></img> {/*Display an image with the source as the image data url*/}
       </li>
     );
-  } else {
+  } else if (data.type=="join") {
     return (
       <li>
-        <p className="joinmsg">{data}</p>
+        <p className="joinmsg">{data.value}</p>
+      </li>
+    );
+  } else if (data.type=="user") {
+    return (
+      <li>
+        <p className="name">{data.value}</p>
+      </li>
+    );
+  } else if (data.type=="leave") {
+    return (
+      <li>
+        <p className="leavemsg">{data.value}</p>
       </li>
     );
   }

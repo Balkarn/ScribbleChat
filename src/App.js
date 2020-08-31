@@ -96,8 +96,11 @@ const MainComponent = ({name}) => {
   }
 
   useEffect(() => {
+
     console.log("component mounted");
-    
+
+    socket.emit('requestCurrentlyOnline',name);
+
     setResponses(responses => [...responses, {type:"join",value:name+" joined!"}]); //Add welcome message to responses
     
     socket.on("recieveMessage", data => {
@@ -111,6 +114,10 @@ const MainComponent = ({name}) => {
 
     socket.on("userLeft", data => {
       setResponses(responses => [...responses, { type: "leave", value: data + " left." }]);
+    });
+
+    socket.on("currentlyOnline", data => {
+      setResponses(responses => [...responses, { type: "online", value: data}]);
     });
 
     return () => socket.disconnect(); //close connection when component unmounts
@@ -157,6 +164,12 @@ const ShowMessage = (data) => {
     return (
       <li>
         <p className="leavemsg">{data.value}</p>
+      </li>
+    );
+  } else if (data.type=="online") {
+    return (
+      <li>
+        <p className="name">{data.value}</p>
       </li>
     );
   }

@@ -18,12 +18,13 @@ export default function LoginScreen() {
   const [error,setError] = React.useState(true);
   const [isLoggedIn,setIsLoggedIn] = React.useState(false);
   const [nameDuplicate,setNameDuplicate] = React.useState(false);
-
+  const [takenName,setTakenName] = React.useState('');
 
   useEffect(() => {
 
     socket.on("nameAgain", data => {
       setNameDuplicate(true);
+      setTakenName(data);
     });
 
     socket.on("nameValid", data => {
@@ -79,7 +80,7 @@ export default function LoginScreen() {
             Submit
           </Button>
         </div>
-        {nameDuplicate ? <p>Sorry that name is taken!</p> : null }
+        {nameDuplicate ? <p>Sorry the name {takenName} is taken!</p> : null }
       </div>
     );
   }

@@ -1,11 +1,11 @@
 :root {
-    --main-colour: #5ea3d0;
+    --main-colour: #3f51b5;
     --secondary-colour: white;
     --main-text-colour: #3e5869;
     --secondary-text-colour: #b0c7d6;
     --send-message-form: #F5F5F5;
-    --join-colour: #18c446;
-    --leave-colour: #f74336;
+    --join-colour: #4caf50;
+    --leave-colour: #f50057;
 }
 
 .title {
@@ -26,6 +26,7 @@
     text-align: left;
     color: var(--secondary-colour);
     background: var(--main-colour);
+    width: 670px;
     margin: 0;
     padding: 0;
 }

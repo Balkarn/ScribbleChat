@@ -8,25 +8,32 @@ import DeleteIcon from '@material-ui/icons/Delete';
 const ENDPOINT = "http://127.0.0.1:4001"; //for local testing
 //const ENDPOINT = "https://scribblechat-server.herokuapp.com/"; //for heroku testing
 
-const socket = socketIOClient(ENDPOINT); //connect socketio clinent to endpoint
+const socket = socketIOClient(ENDPOINT); //connect socketio client to endpoint
 
-//Empty canvas png for comparing content
+//Empty canvas png for comparing content (firefox)
 const emptyMessage = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAApoAAACSCAYAAADlwGq7AAABkElEQVR4nO3BgQAAAADDoPlTn+AGVQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPAPwLQABs882JgAAAABJRU5ErkJggg=="
 
+/* The loginscreen component for the app
+ * User inputs their name and the server is contacted to make sure its not a duplicate of who's currently online
+*/
 export default function LoginScreen() {
+
   const [textfieldValue,setTextfieldValue] = React.useState('');
-  const [error,setError] = React.useState(true);
+  const [error,setError] = React.useState(true); //Error boolean
   const [isLoggedIn,setIsLoggedIn] = React.useState(false);
   const [nameDuplicate,setNameDuplicate] = React.useState(false);
-  const [takenName,setTakenName] = React.useState('');
+  const [takenName,setTakenName] = React.useState(''); //Stores the name that was already taken
 
+  //Called only once on component mount
   useEffect(() => {
 
+    //Listens for a message from the server asking for a new name
     socket.on("nameAgain", data => {
       setNameDuplicate(true);
       setTakenName(data);
     });
 
+    //Listens for a message from the server saying the name is valid
     socket.on("nameValid", data => {
       setNameDuplicate(false);
       setIsLoggedIn(true);
@@ -34,17 +41,19 @@ export default function LoginScreen() {
 
   }, []);
 
+  //Function called whenever the textfield is changed
   const handleTextfield = event => {
     var eventVal = event.target.value; //setting a state isn't synchronous so store value in a temp variable
     setTextfieldValue(eventVal);
     setError(eventVal.length == 0 || eventVal.length > 20);
   }
 
+  //Function when the send button is clicked
   const sendValue = () => {
-    if (error) { //only log in if the username is valid
+    if (error) {
       setIsLoggedIn(false);
     } else {
-      socket.emit('tryName',textfieldValue)
+      socket.emit('tryName',textfieldValue)//If the names valid send it to the server to see if it is a duplicate
     }
   }
 
@@ -52,8 +61,9 @@ export default function LoginScreen() {
 
     return (<MainComponent name={textfieldValue}/>);
 
-  } else { //otherwise render the login screen
+  } else { //Otherwise render the login screen
 
+    //Login screen consists of the title component, a textfield form, a send button.  If there is an error that is displayed under the textfield.
     return(
       <div>
         <Title />
@@ -86,54 +96,65 @@ export default function LoginScreen() {
   }
 }
 
+/* The main component for the app
+ * Shows the messages as they are recieved from the server along with any status messages (eg user Joined/Left)
+ * Has the canvas for the user to draw on and additional controls
+ * @param name is the name of the user input previously
+*/
 const MainComponent = ({name}) => {
 
-  const [responses, setResponses] = React.useState([]); //array of responses from server
+  const [responses, setResponses] = React.useState([]); //Array of responses from server
   
+  //Called when data is recieved from the canvas component
   function recieveDataFromCanvas(data) {
-    // setResponses(responses => [...responses, data]); //append response to responses
-    socket.emit('sendMessage',{user:name,message:data}) //send message to server
+    socket.emit('sendMessage',{user:name,message:data}) //Send message to the server
   }
 
+  //Called once when the component is mounted, the return statement is called when the component is unmounted
   useEffect(() => {
 
     console.log("component mounted");
+    socket.emit('requestCurrentlyOnline',name); //Ask the server for everyone online
 
-    socket.emit('requestCurrentlyOnline',name);
-
-    setResponses(responses => [...responses, {type:"join",value:name+" joined!"}]); //Add welcome message to responses
+    setResponses(responses => [...responses, {type:"join",value:"Welcome "+name+"!"}]); //Add welcome message to responses
     
+    //When a message is recieved from the server append the name and message to the responses array
     socket.on("recieveMessage", data => {
-      setResponses(responses => [...responses, { type: "user", value:data.user}]); //append name to responses
-      setResponses(responses => [...responses, { type: "message", value:data.message}]); //append message to responses
+      setResponses(responses => [...responses, { type: "user", value:data.user}]);
+      setResponses(responses => [...responses, { type: "message", value:data.message}]);
     });
 
+    //When the server sends the userJoined event display it in responses
     socket.on("userJoined", data => {
       setResponses(responses => [...responses, { type: "join", value: data + " joined!" }]);
     });
 
+    //When the server sends the userLeft event display it in responses
     socket.on("userLeft", data => {
       setResponses(responses => [...responses, { type: "leave", value: data + " left." }]);
     });
 
+    //When the server sends the currentlyOnline event display the list of everyone online in responses
     socket.on("currentlyOnline", data => {
       setResponses(responses => [...responses, { type: "online", value: data}]);
     });
 
-    return () => socket.disconnect(); //close connection when component unmounts
+    return () => socket.disconnect(); //Close connection when component unmounts
 
   }, []);
 
+  //Called when the component is mounted and whenever the responses state array is updated.  Scrolls the scrollable div to the bottom.  
   useEffect(() => {
     document.getElementById("scrolldiv").scrollTop = document.getElementById("scrolldiv").scrollHeight;
   }, [responses]);
 
+  //Displays the comonent: consists of a title, the list of messages in the responses array, and the canvas component for the user input.
   return (
     <div className="app">
       <Title /> {/*title component*/}
       <div id="scrolldiv" className = "list">
         <ul className ="listcomponent">
-          {responses.map(aResponse => ShowMessage(aResponse,name)) /*For each response call the ShowMessage function and increase the messages count*/}
+          {responses.map(aResponse => ShowMessage(aResponse,name)) /*For each response call the ShowMessage function*/}
         </ul>
       </div>
       <CanvasBox sendDataFromCanvas={recieveDataFromCanvas} /> {/*drawing canvas component*/}
@@ -141,11 +162,14 @@ const MainComponent = ({name}) => {
   );
 }
 
+/* Function to render each message that can be recieved from the server depending on the type of message
+ * @param data has 2 componenets: the type of message to be rendered and the value
+*/
 const ShowMessage = (data) => {
   if (data.type=="message") {
     return (
       <li>
-        <img src={data.value}></img> {/*Display an image with the source as the image data url*/}
+        <img src={data.value}></img> {/*Display an image with the source as the image data URI*/}
       </li>
     );
   } else if (data.type=="join") {
@@ -175,6 +199,7 @@ const ShowMessage = (data) => {
   }
 }
 
+//Function to render the title componenet
 const Title = () => {
   return (
     <div>
@@ -183,26 +208,34 @@ const Title = () => {
   );
 }
 
+/* Renders the Canvas component
+ * @param sendDataFromCanvas is the function in the parent component which allows the child-component to send up the data drawn on the canvas 
+*/
 const CanvasBox = ({sendDataFromCanvas}) => {
+
   const canvasRef = React.useRef(null); //reference to canvas
   const [context, setContext] = React.useState(null); //context of canvas
 
+  //Function is called when the component is mounted and every render if the context state is updated, which contains the info about the canvas.
   React.useEffect(() => {
 
+    //Changes the stored offset values everytime the window is resized
     function handleResize() {
-      canvasOffsetLeft = canvasRef.current.offsetLeft; //Change canvas offset when window resizes
+      canvasOffsetLeft = canvasRef.current.offsetLeft;
       canvasOffsetTop = canvasRef.current.offsetTop;
     }
     
     window.addEventListener('resize', handleResize.bind(this)); //Event to listen for window resize
 
-    let mouseDown = false; //mouse variables
+    //Mouse variables
+    let mouseDown = false;
     let start = { x: 0, y: 0 };
     let end = { x: 0, y: 0 };
     let canvasOffsetLeft = 0;
     let canvasOffsetTop = 0;
 
-    function handleMouseDown(event) { //track the change in mouse coordinates when mouse down
+    //Function called when the mouse is clicked
+    function handleMouseDown(event) {
       if (context) {
         mouseDown = true;
 
@@ -226,20 +259,23 @@ const CanvasBox = ({sendDataFromCanvas}) => {
       }
     }
 
-    function handleMouseUp() { //record when mouse up
+    //Record when mouse up
+    function handleMouseUp() {
       mouseDown = false;
     }
-    
+
+    //Record when the mouse has exit and reentered
     function handleMouseOver(event) {
-      end = { //record when the mouse has exit and reentered
+      end = { 
         x: event.clientX - canvasOffsetLeft,
         y: event.clientY - canvasOffsetTop,
       };
     }
 
+    //Function called whenever the mouse is moved
     function handleMouseMove(event) {
       if (mouseDown && context) { //if mouse down and canvas exists
-        start = { //record coordinates mouse moved between
+        start = { //Record coordinates mouse moved between
           x: end.x,
           y: end.y,
         };
@@ -260,11 +296,12 @@ const CanvasBox = ({sendDataFromCanvas}) => {
       }
     }
 
+    //If the canvas reference exists
     if (canvasRef.current) {
       const renderCtx = canvasRef.current.getContext('2d'); //2d drawing canvas
 
       if (renderCtx) {
-        document.addEventListener('mousedown', handleMouseDown); //listen for events
+        document.addEventListener('mousedown', handleMouseDown); //listen for mouse events
         document.addEventListener('mouseup', handleMouseUp);
         canvasRef.current.addEventListener('mousemove', handleMouseMove);
         canvasRef.current.addEventListener("mouseover", handleMouseOver);
@@ -276,30 +313,35 @@ const CanvasBox = ({sendDataFromCanvas}) => {
       }
     }
 
+    //Called when the componenet is unmounted
     return function cleanup() {
       if (canvasRef.current) {
-        canvasRef.current.removeEventListener('mousedown', handleMouseDown); //remove event listeners when no longer needed
+        canvasRef.current.removeEventListener('mousedown', handleMouseDown); //Remove event listeners when no longer needed
         canvasRef.current.removeEventListener('mouseup', handleMouseUp);
         canvasRef.current.removeEventListener('mousemove', handleMouseMove);
       }
     }
   }, [context]);
 
+  //Clearcanvas function called when the clear button is pressed
   function clearcanvas() {
-    context.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height); //clear the canvas
+    context.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
   }
 
+  //Sendmessage function called when the send button is pressed
   function sendmessage() {
-    var imagedataurl = document.getElementById('canvas').toDataURL(); //get image data as a data url
+
+    var imagedataurl = document.getElementById('canvas').toDataURL(); //get image data as a data URI
     if (imagedataurl != emptyMessage) {
-      sendDataFromCanvas(imagedataurl);
-      context.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height); //clear the canvas
+      sendDataFromCanvas(imagedataurl); //Call the sendDataFromCanvas function, which refers to the parent recieveDataFromCanvas function.
+      context.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height); //Clear the canvas
     } else {
       console.log("Message not sent (spam)")
     }
+
   }
 
-
+  //Renders the component, has the canvas horizontally next to the buttons which are laid out vertically
   return (
     <div>
       <div className="canvasholder">

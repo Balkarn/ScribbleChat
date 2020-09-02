@@ -5,8 +5,8 @@ import { TextField, Button } from '@material-ui/core';
 import SendIcon from '@material-ui/icons/Send';
 import DeleteIcon from '@material-ui/icons/Delete';
 
-const ENDPOINT = "http://127.0.0.1:4001"; //for local testing
-//const ENDPOINT = "https://scribblechat-server.herokuapp.com/"; //for heroku testing
+//const ENDPOINT = "http://127.0.0.1:4001"; //for local testing
+const ENDPOINT = "https://scribblechat-server.herokuapp.com/"; //for heroku testing
 
 const socket = socketIOClient(ENDPOINT); //connect socketio client to endpoint
 
